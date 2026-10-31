@@ -70,7 +70,7 @@ function Isi({ d }) {
       </ChartCard>
 
       <div className="grid2">
-        <ChartCard title="Tren Output Harian" subtitle={`Good output Sheating, ${d.tahun}`}
+        <ChartCard title="Tren Output Harian" subtitle={`Good output proses akhir, ${d.tahun}`}
                    table={{ columns: ['Tanggal', 'Output'], rows: d.harian.map((r) => [fmtTgl(r.tanggal), fmtInt(r.output)]) }}>
           {d.harian.length === 0 ? <Empty /> : (
             <ResponsiveContainer>

@@ -40,7 +40,7 @@ function Isi({ d }) {
         <KpiCard label="Productivity" value={fmtPct(k.productivity, 1)} accent={C.purple}
                  sub={isNum(k.actualMHP) ? `${k.actualMHP.toFixed(4).replace('.', ',')} jam-orang/pcs` : 'Belum ada data'}
                  status={isNum(k.productivity) ? (k.productivity >= 1 ? 'good' : 'warn') : ''} />
-        <KpiCard label="WIP (pcs)" value={fmtInt(k.wip)} accent={C.pink} sub="Sudah bending, belum cartoning" />
+        <KpiCard label="WIP (pcs)" value={fmtInt(k.wip)} accent={C.pink} sub="Sudah Forming, belum selesai Packaging" />
         <KpiCard label="Progres PO" value={fmtPct(k.progresPO, 0)} accent={C.blue}
                  sub={`${fmtInt(k.poSelesai)} dari ${fmtInt(k.poTotal)} PO selesai`} />
       </div>

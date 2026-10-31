@@ -181,8 +181,8 @@ SELECT
     o.DateOperation,
     o.DateReport,
     o.Process,
-    ProcessOrder = CASE o.Process WHEN N'Bending' THEN 1 WHEN N'Scanning' THEN 2
-                                  WHEN N'Sheating' THEN 3 WHEN N'Cartoning' THEN 4 ELSE 9 END,
+    ProcessOrder = CASE o.Process WHEN N'PROSES_1' THEN 1 WHEN N'PROSES_2' THEN 2
+                                  WHEN N'PROSES_3' THEN 3 WHEN N'PROSES_4' THEN 4 ELSE 9 END,
     o.Shift,
     o.ProductType,
     o.PON,

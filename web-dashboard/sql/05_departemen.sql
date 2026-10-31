@@ -27,8 +27,8 @@ CREATE TABLE dbo.tblBA204_Departemen (
 GO
 MERGE dbo.tblBA204_Departemen AS t
 USING (VALUES
-    (N'SS',  N'Lini Produk B',            N'%LINI-B%', 1, N'Sheating', N'Bending', N'Cartoning', 0.975, 2),
-    (N'HDC', N'Lini Produk A',            N'%',        9, N'Sheating', N'Bending', N'Cartoning', 0.975, 1)
+    (N'SS',  N'Lini Produk B',            N'%LINI-B%', 1, N'PROSES_3', N'PROSES_1', N'PROSES_4', 0.975, 2),
+    (N'HDC', N'Lini Produk A',            N'%',        9, N'PROSES_3', N'PROSES_1', N'PROSES_4', 0.975, 1)
 ) AS s (Dept, Nama, PolaProductType, Prioritas, ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir, TargetYieldDefault, Urut)
 ON t.Dept = s.Dept
 WHEN NOT MATCHED THEN INSERT (Dept, Nama, PolaProductType, Prioritas, ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir, TargetYieldDefault, Urut)
@@ -202,8 +202,8 @@ WITH pos AS (
 ), agg AS (
     SELECT x.Dept, x.PON,
            Material     = MAX(x.Material),
-           BendingStart = SUM(CASE WHEN x.Process = dp.ProsesWIPAwal  THEN x.Qty_Start  ELSE 0 END),
-           CartonOutput = SUM(CASE WHEN x.Process = dp.ProsesWIPAkhir THEN x.Qty_Output ELSE 0 END),
+           QtyMulaiWIP = SUM(CASE WHEN x.Process = dp.ProsesWIPAwal  THEN x.Qty_Start  ELSE 0 END),
+           QtySelesaiWIP = SUM(CASE WHEN x.Process = dp.ProsesWIPAkhir THEN x.Qty_Output ELSE 0 END),
            FirstDate    = MIN(x.DateOperation),
            LastDate     = MAX(x.DateOperation)
     FROM dbo.vw_D_PODailyOutput x JOIN dbo.tblBA204_Departemen dp ON dp.Dept = x.Dept
@@ -214,16 +214,16 @@ SELECT p.Dept, p.PON,
        SKU        = COALESCE(m.SKU, REPLACE(h.MaterialDesc, N'.', N' '), N'Material ' + COALESCE(h.Material, a.Material)),
        Batch      = h.Batch,
        Supplier   = h.Supplier,
-       StatusPO   = COALESCE(NULLIF(h.ProductionStatus, N''), CASE WHEN a.CartonOutput > 0 THEN N'Completed' ELSE N'WIP' END),
+       StatusPO   = COALESCE(NULLIF(h.ProductionStatus, N''), CASE WHEN a.QtySelesaiWIP > 0 THEN N'Completed' ELSE N'WIP' END),
        IsCompleted= CAST(CASE WHEN COALESCE(h.ProductionStatus, N'') LIKE N'Completed%' THEN 1
-                              WHEN h.ProductionStatus IS NULL AND a.CartonOutput > 0 THEN 1 ELSE 0 END AS int),
+                              WHEN h.ProductionStatus IS NULL AND a.QtySelesaiWIP > 0 THEN 1 ELSE 0 END AS int),
        QCRelease  = h.QCRelease,
        StartDate  = COALESCE(h.StartDate, a.FirstDate),
        EndDate    = COALESCE(h.EndDate, a.LastDate),
-       BendingStart = CAST(ISNULL(a.BendingStart, 0) AS float),
-       CartonOutput = CAST(ISNULL(a.CartonOutput, 0) AS float),
-       WIP_Qty    = CAST(CASE WHEN ISNULL(a.BendingStart,0) - ISNULL(a.CartonOutput,0) > 0
-                              THEN ISNULL(a.BendingStart,0) - ISNULL(a.CartonOutput,0) ELSE 0 END AS float)
+       QtyMulaiWIP = CAST(ISNULL(a.QtyMulaiWIP, 0) AS float),
+       QtySelesaiWIP = CAST(ISNULL(a.QtySelesaiWIP, 0) AS float),
+       WIP_Qty    = CAST(CASE WHEN ISNULL(a.QtyMulaiWIP,0) - ISNULL(a.QtySelesaiWIP,0) > 0
+                              THEN ISNULL(a.QtyMulaiWIP,0) - ISNULL(a.QtySelesaiWIP,0) ELSE 0 END AS float)
 FROM pos p
 LEFT JOIN agg a ON a.Dept = p.Dept AND a.PON = p.PON
 LEFT JOIN dbo.vw_D_POHeader h ON h.Dept = p.Dept AND h.PON = p.PON

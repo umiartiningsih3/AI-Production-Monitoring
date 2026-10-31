@@ -50,14 +50,14 @@ CREATE TABLE dbo.tblBA204_ModelInfo (
 GO
 
 /* ---------- Data harian (dasar KPI & prediksi) ----------
-   Output  = Good output proses Sheating per Date for Daily Report
+   Output  = Good output proses akhir (PROSES_3) per Date for Daily Report
    Scrap   = semua reject (semua proses) per Date for Daily Report
    Sama dengan rumus di sheet Daily Output Summary.                  */
 CREATE OR ALTER VIEW dbo.vw_Harian AS
 WITH o AS (
     SELECT DateReport AS Tanggal, SUM(Qty_Output) AS Output_
     FROM dbo.tblBA204_PODailyOutput
-    WHERE Process = N'Sheating' AND DateReport IS NOT NULL
+    WHERE Process = N'PROSES_3' AND DateReport IS NOT NULL
     GROUP BY DateReport
 ), s AS (
     SELECT DateReport AS Tanggal, SUM(Reject_qty) AS Scrap
@@ -83,18 +83,18 @@ LEFT JOIN s ON s.Tanggal = t.Tanggal
 LEFT JOIN p ON p.Tanggal = t.Tanggal;
 GO
 
-/* WIP (pcs sudah Bending tapi belum Cartoning) & progres PO pada akhir suatu tanggal */
+/* WIP (pcs sudah masuk PROSES_1 tapi belum selesai PROSES_4) & progres PO pada akhir suatu tanggal */
 CREATE OR ALTER FUNCTION dbo.fn_WIP_Snapshot (@Tanggal date)
 RETURNS TABLE AS RETURN
 WITH b AS (
     SELECT PON, SUM(Qty_Start) AS Mulai
     FROM dbo.tblBA204_PODailyOutput
-    WHERE Process = N'Bending' AND DateOperation <= @Tanggal
+    WHERE Process = N'PROSES_1' AND DateOperation <= @Tanggal
     GROUP BY PON
 ), c AS (
     SELECT PON, SUM(Qty_Output) AS Selesai
     FROM dbo.tblBA204_PODailyOutput
-    WHERE Process = N'Cartoning' AND DateOperation <= @Tanggal
+    WHERE Process = N'PROSES_4' AND DateOperation <= @Tanggal
     GROUP BY PON
 )
 SELECT WIP       = CAST(ISNULL(SUM(CASE WHEN b.Mulai - ISNULL(c.Selesai, 0) > 0
@@ -195,8 +195,8 @@ WITH pos AS (
 ), agg AS (
     SELECT PON,
            Material     = MAX(Material),
-           BendingStart = SUM(CASE WHEN Process = N'Bending'   THEN Qty_Start  ELSE 0 END),
-           CartonOutput = SUM(CASE WHEN Process = N'Cartoning' THEN Qty_Output ELSE 0 END),
+           QtyMulaiWIP = SUM(CASE WHEN Process = N'PROSES_1'   THEN Qty_Start  ELSE 0 END),
+           QtySelesaiWIP = SUM(CASE WHEN Process = N'PROSES_4' THEN Qty_Output ELSE 0 END),
            FirstDate    = MIN(DateOperation),
            LastDate     = MAX(DateOperation)
     FROM dbo.tblBA204_PODailyOutput GROUP BY PON
@@ -206,16 +206,16 @@ SELECT p.PON,
        SKU        = COALESCE(m.SKU, REPLACE(h.MaterialDesc, N'.', N' '), N'Material ' + COALESCE(h.Material, a.Material)),
        Batch      = h.Batch,
        Supplier   = h.Supplier,
-       StatusPO   = COALESCE(NULLIF(h.ProductionStatus, N''), CASE WHEN a.CartonOutput > 0 THEN N'Completed' ELSE N'WIP' END),
+       StatusPO   = COALESCE(NULLIF(h.ProductionStatus, N''), CASE WHEN a.QtySelesaiWIP > 0 THEN N'Completed' ELSE N'WIP' END),
        IsCompleted= CAST(CASE WHEN COALESCE(h.ProductionStatus, N'') LIKE N'Completed%' THEN 1
-                              WHEN h.ProductionStatus IS NULL AND a.CartonOutput > 0 THEN 1 ELSE 0 END AS int),
+                              WHEN h.ProductionStatus IS NULL AND a.QtySelesaiWIP > 0 THEN 1 ELSE 0 END AS int),
        QCRelease  = h.QCRelease,
        StartDate  = COALESCE(h.StartDate, a.FirstDate),
        EndDate    = COALESCE(h.EndDate, a.LastDate),
-       BendingStart = CAST(ISNULL(a.BendingStart, 0) AS float),
-       CartonOutput = CAST(ISNULL(a.CartonOutput, 0) AS float),
-       WIP_Qty    = CAST(CASE WHEN ISNULL(a.BendingStart,0) - ISNULL(a.CartonOutput,0) > 0
-                              THEN ISNULL(a.BendingStart,0) - ISNULL(a.CartonOutput,0) ELSE 0 END AS float)
+       QtyMulaiWIP = CAST(ISNULL(a.QtyMulaiWIP, 0) AS float),
+       QtySelesaiWIP = CAST(ISNULL(a.QtySelesaiWIP, 0) AS float),
+       WIP_Qty    = CAST(CASE WHEN ISNULL(a.QtyMulaiWIP,0) - ISNULL(a.QtySelesaiWIP,0) > 0
+                              THEN ISNULL(a.QtyMulaiWIP,0) - ISNULL(a.QtySelesaiWIP,0) ELSE 0 END AS float)
 FROM pos p
 LEFT JOIN agg a ON a.PON = p.PON
 LEFT JOIN dbo.tblBA204_POHeader h ON h.PON = p.PON
@@ -227,7 +227,7 @@ CREATE OR ALTER VIEW dbo.vw_PBI_OutputPO AS
 WITH o AS (
     SELECT DateReport AS Tanggal, PON, SUM(Qty_Output) AS Output_
     FROM dbo.tblBA204_PODailyOutput
-    WHERE Process = N'Sheating' AND DateReport IS NOT NULL
+    WHERE Process = N'PROSES_3' AND DateReport IS NOT NULL
     GROUP BY DateReport, PON
 ), s AS (
     SELECT DateReport AS Tanggal, PON, SUM(Reject_qty) AS Scrap

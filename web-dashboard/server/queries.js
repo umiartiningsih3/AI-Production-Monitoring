@@ -94,9 +94,19 @@ SELECT Output_ = ISNULL(SUM(Output_), 0), Scrap = ISNULL(SUM(Scrap), 0) FROM #op
 SELECT d.RejectName, d.RejectCode, Qty = SUM(d.Qty)
 FROM #d d JOIN #po p ON p.PON = d.PON
 GROUP BY d.RejectName, d.RejectCode ORDER BY Qty DESC;
-SELECT d.Process, Qty = SUM(d.Qty)
+-- nama proses asli tidak ditampilkan: diganti Forming, Inspection, Covering, Packaging sesuai urutan alur
+SELECT Process = CASE WHEN d.Process = dp.ProsesWIPAwal  THEN N'Forming'
+                      WHEN d.Process = dp.ProsesOutput   THEN N'Covering'
+                      WHEN d.Process = dp.ProsesWIPAkhir THEN N'Packaging'
+                      ELSE N'Inspection' END,
+       Qty = SUM(d.Qty)
 FROM #d d JOIN #po p ON p.PON = d.PON
-GROUP BY d.Process ORDER BY Qty DESC;
+CROSS JOIN (SELECT * FROM dbo.tblBA204_Departemen WHERE Dept = @dept) dp
+GROUP BY CASE WHEN d.Process = dp.ProsesWIPAwal  THEN N'Forming'
+              WHEN d.Process = dp.ProsesOutput   THEN N'Covering'
+              WHEN d.Process = dp.ProsesWIPAkhir THEN N'Packaging'
+              ELSE N'Inspection' END
+ORDER BY Qty DESC;
 WITH o AS (
   SELECT Tanggal, Output_ = SUM(Output_), Scrap = SUM(Scrap) FROM #op GROUP BY Tanggal HAVING SUM(Output_) > 0
 )

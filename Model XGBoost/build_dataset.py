@@ -2,6 +2,12 @@
 import sys, datetime as dt
 import openpyxl, pandas as pd, numpy as np
 
+# Nama proses diambil dari environment (nama asli disimpan lokal, tidak di repo)
+import os
+PROSES_OUTPUT = os.environ.get('PROSES_OUTPUT', 'PROSES_3')      # proses penghasil good output akhir
+PROSES_WIP_AWAL = os.environ.get('PROSES_WIP_AWAL', 'PROSES_1')  # awal hitungan WIP
+PROSES_WIP_AKHIR = os.environ.get('PROSES_WIP_AKHIR', 'PROSES_4')  # akhir hitungan WIP
+
 src = sys.argv[1]
 wb = openpyxl.load_workbook(src, data_only=True, read_only=True)
 ws = wb['Data Process Prod ']
@@ -37,7 +43,7 @@ for k in range(4, 35):
         plan[d.date()] = float(orow[5][k] or 0)
 plan = pd.Series(plan, name='Plan')
 
-out = po[po.Process == 'Sheating'].groupby('DateReport').Qty_Output.sum().rename('Output')
+out = po[po.Process == PROSES_OUTPUT].groupby('DateReport').Qty_Output.sum().rename('Output')
 scr = rej.groupby('DateReport').Qty.sum().rename('Scrap')
 d = pd.concat([plan, out, scr], axis=1).fillna(0)
 d.index = pd.to_datetime(d.index)
@@ -48,8 +54,8 @@ po['DateOperation'] = pd.to_datetime(po.DateOperation)
 wip, prog = {}, {}
 for day in d.index:
     upto = po[po.DateOperation <= day]
-    bend = upto[upto.Process == 'Bending'].groupby('PON').Qty_Start.sum()
-    cart = upto[upto.Process == 'Cartoning'].groupby('PON').Qty_Output.sum()
+    bend = upto[upto.Process == PROSES_WIP_AWAL].groupby('PON').Qty_Start.sum()
+    cart = upto[upto.Process == PROSES_WIP_AKHIR].groupby('PON').Qty_Output.sum()
     started = bend.index
     done = cart.index.intersection(started)
     wip[day] = float((bend - cart.reindex(bend.index).fillna(0)).clip(lower=0).sum())
