@@ -58,17 +58,20 @@ ORDER BY COALESCE(o.Tanggal, pl.Tanggal);`,
 
   tren: `
 ${PO_TMP}
-${OUT_TMP('YEAR(o.Tanggal) = @year')}
+${OUT_TMP('(@year = 0 OR YEAR(o.Tanggal) = @year)')}
+-- @year = 0 berarti semua tahun
 WITH o AS (
-  SELECT m = MONTH(Tanggal), Output_ = SUM(Output_), Scrap = SUM(Scrap) FROM #op GROUP BY MONTH(Tanggal)
+  SELECT y = YEAR(Tanggal), m = MONTH(Tanggal), Output_ = SUM(Output_), Scrap = SUM(Scrap)
+  FROM #op GROUP BY YEAR(Tanggal), MONTH(Tanggal)
 ), pl AS (
-  SELECT m = MONTH(Tanggal), PlanOutput = SUM(PlanOutput)
-  FROM dbo.vw_PBI_Plan WHERE Dept = @dept AND YEAR(Tanggal) = @year GROUP BY MONTH(Tanggal)
+  SELECT y = YEAR(Tanggal), m = MONTH(Tanggal), PlanOutput = SUM(PlanOutput)
+  FROM dbo.vw_PBI_Plan WHERE Dept = @dept AND (@year = 0 OR YEAR(Tanggal) = @year)
+  GROUP BY YEAR(Tanggal), MONTH(Tanggal)
 )
-SELECT Bulan = COALESCE(o.m, pl.m), Output_ = ISNULL(o.Output_, 0), Scrap = ISNULL(o.Scrap, 0),
-       PlanOutput = ISNULL(pl.PlanOutput, 0)
-FROM o FULL OUTER JOIN pl ON pl.m = o.m
-ORDER BY COALESCE(o.m, pl.m);
+SELECT Tahun = COALESCE(o.y, pl.y), Bulan = COALESCE(o.m, pl.m), Output_ = ISNULL(o.Output_, 0),
+       Scrap = ISNULL(o.Scrap, 0), PlanOutput = ISNULL(pl.PlanOutput, 0)
+FROM o FULL OUTER JOIN pl ON pl.y = o.y AND pl.m = o.m
+ORDER BY COALESCE(o.y, pl.y), COALESCE(o.m, pl.m);
 SELECT Tanggal = CONVERT(char(10), Tanggal, 23), Output_ = SUM(Output_)
 FROM #op GROUP BY Tanggal HAVING SUM(Output_) > 0 ORDER BY Tanggal;`,
 

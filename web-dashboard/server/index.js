@@ -131,11 +131,12 @@ const api = {
 
   async tren(q) {
     const m = await getMeta(deptOf(q));
-    const year = num(q.tahun) || (m.tahun && m.tahun[0]) || new Date().getFullYear();
+    const semua = q.tahun === 'semua';
+    const year = semua ? 0 : (num(q.tahun) || (m.tahun && m.tahun[0]) || new Date().getFullYear());
     const [bulanan, harian] = await db.query(SQL.tren, { year, ...filterPO(q) });
     const bulan = bulanan.map((r) => {
       const t = (r.Output_ || 0) + (r.Scrap || 0);
-      return { bulan: r.Bulan, output: r.Output_, plan: r.PlanOutput, scrap: r.Scrap,
+      return { tahun: r.Tahun, bulan: r.Bulan, output: r.Output_, plan: r.PlanOutput, scrap: r.Scrap,
                yield: t ? r.Output_ / t : null,
                capaian: r.PlanOutput ? r.Output_ / r.PlanOutput : null };
     });
@@ -143,7 +144,7 @@ const api = {
     const ytdOut = bulan.reduce((a, b) => a + (b.output || 0), 0);
     const ytdPlan = bulan.reduce((a, b) => a + (b.plan || 0), 0);
     return {
-      tahun: year,
+      tahun: semua ? 'semua' : year,
       bulanTerakhir: last,
       ytd: { output: ytdOut, plan: ytdPlan, capaian: ytdPlan ? ytdOut / ytdPlan : null },
       bulanan: bulan,

@@ -158,6 +158,7 @@ export function Filters({ meta, f, setF, show = ['periode', 'produk', 'status'] 
           <label>Tahun</label>
           <select value={f.tahun || ''} onChange={(e) => setF({ ...f, tahun: e.target.value })}>
             {(meta?.tahun || []).map((t) => <option key={t} value={t}>{t}</option>)}
+            <option value="semua">Semua tahun</option>
           </select>
         </div>
       )}
