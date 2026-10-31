@@ -207,3 +207,4 @@ svg text { font-family: inherit; }
 .alur .step.belum span, .alur .step.belum small { color: #a3a8b0; }
 .po-table th, .po-table td { text-align: left; }
 .po-table th.num, .po-table td.num { text-align: right; }
+.badge.ml { margin-left: 6px; }

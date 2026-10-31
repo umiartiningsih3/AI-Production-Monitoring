@@ -98,15 +98,6 @@ const api = {
     return { q: q.q, ms: Date.now() - t0, hasil: sets[0] };
   },
 
-  // SEMENTARA
-  async migrasi(q) {
-    const fs = require('fs'), path = require('path');
-    const f = path.join(process.env.USERPROFILE || 'C:\\Users\\HP', 'Documents', 'VBA PBL', '_cadangan_nama_asli', q.f || 'x.sql');
-    const out = [];
-    for (const b of fs.readFileSync(f, 'utf8').split(/^\s*GO\s*$/m)) if (b.trim()) out.push(await db.query(b));
-    return out;
-  },
-
   async ringkasan(q) {
     const p = await periode(q);
     const [kpi, plan, prod, wip, harian] = await db.query(SQL.ringkasan, { ...p, ...filterPO(q) });

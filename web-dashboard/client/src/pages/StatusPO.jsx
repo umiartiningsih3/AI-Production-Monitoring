@@ -15,13 +15,27 @@ export default function StatusPO({ meta, f, setF, version }) {
   );
 }
 
-const DIAM_BATAS = 3;   // PO dianggap "tidak bergerak" kalau tidak ada aktivitas >= 3 hari
+const DIAM_BATAS = 3;
+
+// Status di Excel menentukan warna proses sekarang:
+//   "Online <proses>" -> proses itu sedang berjalan (biru)
+//   "WIP <proses>"    -> PO menunggu masuk proses itu: proses itu belum dikerjakan (abu-abu),
+//                        proses sebelumnya sudah selesai (hijau)
+// Kalau status menyebut nama proses, posisi diambil dari status; kalau tidak, dari data produksi.
+function keadaan(p, daftarProses) {
+  const st = String(p.status || '').trim().toLowerCase();
+  const sebut = daftarProses.find((pr) => st.includes(pr.toLowerCase()));
+  const posisi = sebut || p.posisi;
+  const mode = st.startsWith('wip') ? 'wip' : 'online';
+  return { posisi, mode };
+}   // PO dianggap "tidak bergerak" kalau tidak ada aktivitas >= 3 hari
 
 function Isi({ d, meta }) {
   const [semua, setSemua] = useState(false);
   const [cari, setCari] = useState('');
-  const terbuka = d.daftar.filter((p) => !p.closed);
-  const tampil = (semua ? d.daftar : terbuka)
+  const semuaPO = d.daftar.map((p) => (p.closed ? p : { ...p, ...keadaan(p, d.proses) }));
+  const terbuka = semuaPO.filter((p) => !p.closed);
+  const tampil = (semua ? semuaPO : terbuka)
     .filter((p) => !cari || String(p.po).includes(cari.trim()) || String(p.batch || '').includes(cari.trim()))
     .sort((a, b) => (a.closed - b.closed) || ((b.umur ?? -1) - (a.umur ?? -1)));
   const totalWip = terbuka.reduce((a, p) => a + p.wip, 0);
@@ -33,10 +47,12 @@ function Isi({ d, meta }) {
   const perPosisi = d.proses.map((pr) => ({
     proses: pr,
     po: terbuka.filter((p) => p.posisi === pr).length,
+    online: terbuka.filter((p) => p.posisi === pr && p.mode !== 'wip').length,
+    wipPO: terbuka.filter((p) => p.posisi === pr && p.mode === 'wip').length,
     wip: terbuka.filter((p) => p.posisi === pr).reduce((a, p) => a + p.wip, 0),
   }));
   const belumMulai = terbuka.filter((p) => !p.posisi).length;
-  if (belumMulai) perPosisi.unshift({ proses: 'Belum mulai', po: belumMulai, wip: 0 });
+  if (belumMulai) perPosisi.unshift({ proses: 'Belum mulai', po: belumMulai, online: belumMulai, wipPO: 0, wip: 0 });
 
   return (
     <>
@@ -53,7 +69,7 @@ function Isi({ d, meta }) {
                  status={diam.length ? 'bad' : 'good'} />
       </div>
 
-      <ChartCard title="Posisi PO yang belum closed" subtitle="Jumlah PO per proses yang sedang berjalan (urut sesuai alur proses)"
+      <ChartCard title="Posisi PO yang belum closed" subtitle="Jumlah PO per proses, urut sesuai alur. Biru = Online (sedang berjalan), hijau = WIP (menunggu masuk proses itu)"
                  height={220}
                  table={{ columns: ['Proses', 'Jumlah PO', 'WIP (pcs)'], rows: perPosisi.map((x) => [x.proses, fmtInt(x.po), fmtInt(x.wip)]) }}>
         {terbuka.length === 0 ? <Empty>Semua PO sudah closed.</Empty> : (
@@ -64,10 +80,13 @@ function Isi({ d, meta }) {
               <YAxis allowDecimals={false} tick={AXIS} tickLine={false} axisLine={false} width={36} />
               <Tooltip cursor={{ fill: 'rgba(17,141,255,0.08)' }}
                        content={<Tip labelFmt={(_, p) => p.proses} rows={(p) => [
-                         { label: 'Jumlah PO', value: fmtInt(p.po), color: C.blue },
+                         { label: 'Online', value: fmtInt(p.online || 0) + ' PO', color: C.blue },
+                         { label: 'WIP (menunggu masuk)', value: fmtInt(p.wipPO || 0) + ' PO', color: '#2e9e57' },
                          { label: 'WIP', value: fmtInt(p.wip) + ' pcs' }]} />} />
-              <Bar dataKey="po" radius={[4, 4, 0, 0]} maxBarSize={60} isAnimationActive={false}>
+              <Bar dataKey="online" stackId="a" fill={C.blue} maxBarSize={60} isAnimationActive={false}>
                 {perPosisi.map((x) => <Cell key={x.proses} fill={x.proses === 'Belum mulai' ? '#9A9A9A' : C.blue} />)}
+              </Bar>
+              <Bar dataKey="wipPO" stackId="a" fill="#2e9e57" radius={[4, 4, 0, 0]} maxBarSize={60} isAnimationActive={false}>
                 <LabelList dataKey="po" position="top" formatter={(v) => (v ? `${fmtInt(v)} PO` : '')} style={{ fontSize: 11, fill: '#333' }} />
               </Bar>
             </BarChart>
@@ -79,7 +98,7 @@ function Isi({ d, meta }) {
         <header className="card-head">
           <div>
             <h3>Daftar Status PO</h3>
-            <p className="card-sub">Posisi proses tiap PO. Lingkaran biru = proses yang sedang berjalan, hijau = sudah dikerjakan, abu-abu = belum.</p>
+            <p className="card-sub">Hijau = proses sudah selesai, biru = proses sedang berjalan (status <b>Online</b>), abu-abu = belum dikerjakan (termasuk proses yang sedang ditunggu, status <b>WIP</b>).</p>
           </div>
           <div className="card-tools">
             <input className="cari-po" placeholder="Cari no. PO / batch" value={cari} onChange={(e) => setCari(e.target.value)} />
@@ -107,7 +126,8 @@ function Isi({ d, meta }) {
                     <td>{p.produk ? labelProduk(p.produk, produkIdx(p.produk)) : '–'}</td>
                     <td>{p.batch || '–'}</td>
                     <td><span className={`badge ${p.closed ? 'ok' : 'run'}`}>{p.closed ? (p.status || 'Completed') : (p.status && !/^completed/i.test(p.status) ? p.status : 'Running')}</span></td>
-                    <td>{p.closed ? <span className="muted">Selesai</span> : <b>{p.posisi || 'Belum mulai'}</b>}</td>
+                    <td>{p.closed ? <span className="muted">Selesai</span> : (
+                      <><b>{p.posisi || 'Belum mulai'}</b>{p.posisi && <span className={`badge ${p.mode === 'wip' ? 'ok' : 'run'} ml`}>{p.mode === 'wip' ? 'WIP' : 'Online'}</span>}</>)}</td>
                     <td><Alur proses={d.proses} po={p} /></td>
                     <td className="num">{fmtInt(p.wip)}</td>
                     <td>{p.mulai ? fmtTgl(p.mulai) : '–'}</td>
@@ -131,7 +151,13 @@ function Alur({ proses, po }) {
     <div className="alur">
       {proses.map((pr) => {
         const x = ada.get(pr);
-        const kelas = !x ? 'belum' : (!po.closed && pr === po.posisi ? 'jalan' : 'sudah');
+        const urutPos = proses.indexOf(po.posisi);
+        const urutIni = proses.indexOf(pr);
+        let kelas;
+        if (po.closed) kelas = x ? 'sudah' : 'belum';
+        else if (pr === po.posisi) kelas = po.mode === 'wip' ? 'belum' : 'jalan';   // Online = biru, WIP = belum dikerjakan
+        else if (urutPos >= 0) kelas = urutIni < urutPos ? 'sudah' : 'belum';        // sebelum posisi = hijau, sesudah = abu-abu
+        else kelas = x ? 'sudah' : 'belum';
         return (
           <div key={pr} className={`step ${kelas}`} title={x ? `${pr}: start ${fmtInt(x.start)}, good ${fmtInt(x.good)}, scrap ${fmtInt(x.scrap)} (${fmtTgl(x.mulai)} – ${fmtTgl(x.terakhir)})` : `${pr}: belum dikerjakan`}>
             <i />

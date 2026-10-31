@@ -234,6 +234,9 @@ Sub Post_PONOutput()
         conn.Execute "delete from dbo.tblBA204_PODailyOutput where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateReport", bln)
         conn.Execute "delete from dbo.tblBA204_PODetailsReject where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateReport", bln)
     End If
+    'baris PO yang masih berjalan (online, belum punya Date for Daily Report) selalu diisi ulang
+    conn.Execute "delete from dbo.tblBA204_PODailyOutput where ProductType=" & SqlTeks(tProduct) & " and DateReport is null"
+    conn.Execute "delete from dbo.tblBA204_PODetailsReject where ProductType=" & SqlTeks(tProduct) & " and DateReport is null"
 
     'posisi kolom header PO dicari dari judulnya
     Dim cNo As Long, cQC As Long, cStart As Long, cEnd As Long, cSup As Long, cStat As Long, cDesc As Long
@@ -281,9 +284,12 @@ Sub Post_PONOutput()
         alasan = ""
         If tPro = "" Then alasan = alasan & "; *Process kosong"
         If Not IsTanggal(tDateOpt) Then alasan = alasan & "; *Date Process kosong"
-        If Not IsTanggal(tRep) Then alasan = alasan & "; Date for Daily Report kosong"
+        'PO yang masih online (belum ada Date for Daily Report) tetap dikirim supaya
+        'muncul di monitoring Status PO; output-nya baru dihitung di laporan setelah tanggal laporan diisi
+        Dim online As Boolean
+        online = Not IsTanggal(tRep)
         If tPON = "" Then alasan = alasan & "; *PO Number kosong"
-        If Nz(tSty) <= 0 Then alasan = alasan & "; Start Output kosong"
+        If Not online And Nz(tSty) <= 0 Then alasan = alasan & "; Start Output kosong"
         If Not AngkaValid(tRty) Then alasan = alasan & "; Scrap 'Mismatch'"
 
         If alasan = "" Then
@@ -292,7 +298,11 @@ Sub Post_PONOutput()
             'dan tanggal yang sama (beda shift / beda lot) tidak saling menimpa.
             Dim diBulan As Boolean, kunci As String, wh As String
             diBulan = False
-            If Not IsEmpty(bln) Then diBulan = (DateSerial(Year(CDate(tRep)), Month(CDate(tRep)), 1) = bln)
+            If online Then
+                diBulan = True      'sudah dibersihkan di atas (DateReport is null)
+            ElseIf Not IsEmpty(bln) Then
+                diBulan = (DateSerial(Year(CDate(tRep)), Month(CDate(tRep)), 1) = bln)
+            End If
             If Not diBulan Then
                 wh = " where DateOperation=" & SqlTgl(tDateOpt) & " and DateReport=" & SqlTgl(tRep) & " and ProductType=" & SqlTeks(tProduct) & " and Process=" & SqlTeks(tPro) & " and PON=" & SqlTeks(tPON) & " and ISNULL(Shift,N'')=" & SqlTeks(tShi)
                 kunci = wh
