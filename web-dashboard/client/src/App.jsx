@@ -46,7 +46,7 @@ export default function App() {
     setDeptState(d);
     setF({ ...KOSONG, dept: d });     // filter direset: tiap departemen punya periode & produk sendiri
   };
-  useEffect(() => { document.title = `Dashboard Produksi ${namaDept}`; }, [namaDept]);
+  useEffect(() => { document.title = 'Dashboard Produksi'; }, []);
   const [flash, setFlash] = useState(false);
 
   useEffect(() => {
