@@ -75,6 +75,33 @@ ORDER BY COALESCE(o.y, pl.y), COALESCE(o.m, pl.m);
 SELECT Tanggal = CONVERT(char(10), Tanggal, 23), Output_ = SUM(Output_)
 FROM #op GROUP BY Tanggal HAVING SUM(Output_) > 0 ORDER BY Tanggal;`,
 
+  // status PO: posisi proses setiap PO (untuk monitoring PO yang belum closed)
+  statusPO: `
+SET NOCOUNT ON;
+SELECT p.PON, p.SKU, p.Batch, p.StatusPO, p.IsCompleted, p.WIP_Qty,
+       StartDate = CONVERT(char(10), p.StartDate, 23), EndDate = CONVERT(char(10), p.EndDate, 23)
+INTO #po FROM dbo.vw_PBI_PO p WHERE p.Dept = @dept AND (@sku IS NULL OR p.SKU = @sku);
+SELECT x.PON, x.Process, Mulai = MIN(x.DateOperation), Terakhir = MAX(x.DateOperation),
+       QtyStart = SUM(ISNULL(x.Qty_Start, 0)), QtyGood = SUM(ISNULL(x.Qty_Output, 0)), QtyScrap = SUM(ISNULL(x.Qty_Scrap, 0))
+INTO #pp FROM dbo.tblBA204_PODailyOutput x WHERE x.Dept = @dept AND x.DateOperation IS NOT NULL
+GROUP BY x.PON, x.Process;
+-- urutan alur proses: proses awal WIP paling depan, proses akhir WIP paling belakang,
+-- sisanya diurutkan dari rata-rata hari mulai sejak PO mulai
+SELECT p.Process, Urut = ROW_NUMBER() OVER (ORDER BY
+         CASE WHEN p.Process = MAX(dp.ProsesWIPAwal) THEN 0 WHEN p.Process = MAX(dp.ProsesWIPAkhir) THEN 2 ELSE 1 END,
+         AVG(CAST(DATEDIFF(day, s.Mulai0, p.Mulai) AS float)), p.Process)
+INTO #urut
+FROM #pp p
+JOIN (SELECT PON, Mulai0 = MIN(Mulai) FROM #pp GROUP BY PON) s ON s.PON = p.PON
+CROSS JOIN (SELECT ProsesWIPAwal, ProsesWIPAkhir FROM dbo.tblBA204_Departemen WHERE Dept = @dept) dp
+GROUP BY p.Process;
+SELECT Process, Urut FROM #urut ORDER BY Urut;
+SELECT * FROM #po;
+SELECT pp.PON, pp.Process, u.Urut, Mulai = CONVERT(char(10), pp.Mulai, 23), Terakhir = CONVERT(char(10), pp.Terakhir, 23),
+       pp.QtyStart, pp.QtyGood, pp.QtyScrap
+FROM #pp pp JOIN #urut u ON u.Process = pp.Process JOIN #po po ON po.PON = pp.PON;
+SELECT TglData = CONVERT(char(10), MAX(Terakhir), 23) FROM #pp;`,
+
   prediksi: `
 SET NOCOUNT ON;
 SELECT Tanggal, Aktual, Prediksi, Target, IsForecast, APE INTO #pr

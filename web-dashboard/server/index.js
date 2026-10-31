@@ -98,6 +98,15 @@ const api = {
     return { q: q.q, ms: Date.now() - t0, hasil: sets[0] };
   },
 
+  // SEMENTARA
+  async migrasi(q) {
+    const fs = require('fs'), path = require('path');
+    const f = path.join(process.env.USERPROFILE || 'C:\\Users\\HP', 'Documents', 'VBA PBL', '_cadangan_nama_asli', q.f || 'x.sql');
+    const out = [];
+    for (const b of fs.readFileSync(f, 'utf8').split(/^\s*GO\s*$/m)) if (b.trim()) out.push(await db.query(b));
+    return out;
+  },
+
   async ringkasan(q) {
     const p = await periode(q);
     const [kpi, plan, prod, wip, harian] = await db.query(SQL.ringkasan, { ...p, ...filterPO(q) });
@@ -150,6 +159,34 @@ const api = {
       bulanan: bulan,
       harian: harian.map((r) => ({ tanggal: r.Tanggal, output: r.Output_ })),
     };
+  },
+
+  // monitoring status PO: posisi proses tiap PO, WIP, umur, aktivitas terakhir
+  async statusPO(q) {
+    const [urut, pos, procs, tgl] = await db.query(SQL.statusPO, { dept: deptOf(q), sku: str(q.produk) });
+    const tglData = (tgl[0] && tgl[0].TglData) || null;
+    const hari = (a, b) => (a && b ? Math.round((Date.parse(b) - Date.parse(a)) / 864e5) : null);
+    const per = new Map();
+    for (const r of procs) {
+      if (!per.has(r.PON)) per.set(r.PON, []);
+      per.get(r.PON).push({ proses: r.Process, urut: r.Urut, mulai: r.Mulai, terakhir: r.Terakhir,
+                            start: r.QtyStart, good: r.QtyGood, scrap: r.QtyScrap });
+    }
+    const daftar = pos.map((p) => {
+      const pr = (per.get(p.PON) || []).sort((a, b) => a.urut - b.urut);
+      const now = pr[pr.length - 1] || null;                       // proses paling jauh yang sudah dikerjakan
+      const mulai = p.StartDate || (pr.length ? pr.map((x) => x.mulai).sort()[0] : null);
+      const terakhir = pr.length ? pr.map((x) => x.terakhir).sort().slice(-1)[0] : null;
+      return {
+        po: p.PON, produk: p.SKU, batch: p.Batch, status: p.StatusPO, closed: !!p.IsCompleted,
+        wip: p.WIP_Qty || 0, mulai, terakhir,
+        posisi: now ? now.proses : null, posisiUrut: now ? now.urut : 0,
+        // PO terbuka: umur sampai tanggal data terakhir; PO closed: lama pengerjaan (mulai s/d aktivitas terakhir)
+        umur: p.IsCompleted ? hari(mulai, terakhir) : hari(mulai, tglData), diam: hari(terakhir, tglData),
+        proses: pr,
+      };
+    });
+    return { tglData, proses: urut.map((r) => r.Process), daftar };
   },
 
   async prediksi(q) {

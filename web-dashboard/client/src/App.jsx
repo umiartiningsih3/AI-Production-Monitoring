@@ -5,10 +5,12 @@ import Ringkasan from './pages/Ringkasan.jsx';
 import Tren from './pages/Tren.jsx';
 import Prediksi from './pages/Prediksi.jsx';
 import Defect from './pages/Defect.jsx';
+import StatusPO from './pages/StatusPO.jsx';
 
 const PAGES = [
   { id: 'ringkasan', label: 'Ringkasan Produksi', comp: Ringkasan },
   { id: 'tren', label: 'Pencapaian & Tren', comp: Tren },
+  { id: 'statuspo', label: 'Status PO & WIP', comp: StatusPO },
   { id: 'prediksi', label: 'Aktual vs Prediksi', comp: Prediksi },
   { id: 'defect', label: 'Analisis Defect', comp: Defect },
 ];
