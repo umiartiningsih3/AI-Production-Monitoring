@@ -61,7 +61,7 @@ function Isi({ d }) {
                          { label: 'Capaian', value: fmtPct(p.capaian) },
                        ]} />} />
               <Bar dataKey="output" fill={C.blue} radius={[4, 4, 0, 0]} maxBarSize={30} isAnimationActive={false}>
-                <LabelList dataKey="output" content={valueLabel(fmtLabel, { min: 0 })} />
+                <LabelList dataKey="output" content={valueLabel(fmtInt, { min: 0 })} />
               </Bar>
               <Bar dataKey="plan" fill={C.navy} radius={[4, 4, 0, 0]} maxBarSize={30} isAnimationActive={false} />
             </BarChart>
@@ -70,18 +70,18 @@ function Isi({ d }) {
       </ChartCard>
 
       <div className="grid2">
-        <ChartCard title="Tren Output Harian" subtitle={`Good output proses akhir, ${d.tahun}`}
+        <ChartCard title="Tren Output Harian" points={d.harian.length} subtitle={`Good output proses akhir, ${d.tahun}`}
                    table={{ columns: ['Tanggal', 'Output'], rows: d.harian.map((r) => [fmtTgl(r.tanggal), fmtInt(r.output)]) }}>
           {d.harian.length === 0 ? <Empty /> : (
             <ResponsiveContainer>
-              <LineChart data={d.harian} margin={{ top: d.harian.length > 16 ? 40 : 20, right: 26, left: 0, bottom: 0 }}>
+              <LineChart data={d.harian} margin={{ top: 20, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke={C.grid} />
                 <XAxis dataKey="tanggal" tickFormatter={fmtTglPendek} tick={AXIS} tickLine={false}
-                       axisLine={{ stroke: C.grid }} minTickGap={14} />
+                       axisLine={{ stroke: C.grid }} interval={0} />
                 <YAxis tickFormatter={fmtCompact} tick={AXIS} tickLine={false} axisLine={false} width={46} />
                 <Tooltip content={<Tip labelFmt={fmtTgl} rows={(p) => [{ label: 'Output', value: fmtInt(p.output) + ' pcs', color: C.blue }]} />} />
                 <Line dataKey="output" stroke={C.blue} strokeWidth={2} dot={{ r: 2.5, fill: C.blue }} activeDot={{ r: 5 }} isAnimationActive={false}>
-                  <LabelList dataKey="output" content={valueLabel(fmtLabel, { count: d.harian.length, color: C.blue })} />
+                  <LabelList dataKey="output" content={valueLabel(fmtInt, { count: d.harian.length, color: C.blue })} />
                 </Line>
               </LineChart>
             </ResponsiveContainer>

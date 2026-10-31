@@ -18,7 +18,7 @@ Attribute VB_Name = "YieldOutput"
 Option Explicit
 
 '------------------- PENGATURAN DATABASE LOKAL -------------------
-Public Const DB_SERVER As String = "localhost\SQLEXPRESS"
+Public Const DB_SERVER As String = "LAPTOP-CAUU01V5\SQLEXPRESS"
 Public Const DB_NAME As String = "PBL_MonitoringProduksi"
 '-----------------------------------------------------------------
 
@@ -144,6 +144,33 @@ Private Function AngkaValid(ByVal v As Variant) As Boolean
     End If
 End Function
 
+'Bulan laporan file ini (dari sel B7 sheet ringkasan); Empty kalau tidak ada
+Private Function BulanFile(ByVal ws As Worksheet) As Variant
+    Dim v
+    v = ws.Range("B7").Value
+    If IsTanggal(v) Then BulanFile = DateSerial(Year(CDate(v)), Month(CDate(v)), 1) Else BulanFile = Empty
+End Function
+
+'Kondisi SQL: kolom berada di dalam bulan laporan
+'Cari nomor kolom header PO (baris 3, kolom 1..26) berdasarkan judulnya,
+'supaya macro bisa dipakai di file Lini Produk A maupun B walau posisi kolomnya beda
+Private Function KolomHeader(ByVal ws As Worksheet, ByVal judul As String) As Long
+    Dim c As Long, t As String
+    For c = 1 To 26
+        t = LCase$(Trim$(Replace(Replace(CStr(ws.Cells(3, c).Value), vbCr, " "), vbLf, " ")))
+        If t = LCase$(judul) Or (Len(judul) > 2 And InStr(1, t, LCase$(judul)) = 1) Then KolomHeader = c: Exit Function
+    Next c
+    KolomHeader = 0
+End Function
+
+Private Function NilaiKolom(ByVal ws As Worksheet, ByVal B As Long, ByVal kol As Long) As Variant
+    If kol > 0 Then NilaiKolom = ws.Cells(B, kol).Value Else NilaiKolom = Empty
+End Function
+
+Private Function RentangBulan(ByVal kolom As String, ByVal bln As Variant) As String
+    RentangBulan = kolom & " >= '" & Format$(bln, "yyyy-mm-dd") & "' and " & kolom & " < '" & Format$(DateAdd("m", 1, bln), "yyyy-mm-dd") & "'"
+End Function
+
 Private Sub CatatLewat(ByVal sheetName As String, ByVal sel As String, ByVal alasan As String)
     mJumlahLewat = mJumlahLewat + 1
     If mJumlahLewat <= 8 Then
@@ -199,6 +226,30 @@ Sub Post_PONOutput()
     DT = Now
     tProduct = Trim$(CStr(ws.Range("C3").Value))
 
+    'Sinkron: hapus dulu semua data bulan laporan ini, supaya baris yang tanggalnya
+    'dihapus di Excel juga hilang dari database & dashboard
+    Dim bln As Variant
+    bln = BulanFile(ThisWorkbook.Sheets("Daily Output Summary"))
+    If Not IsEmpty(bln) Then
+        conn.Execute "delete from dbo.tblBA204_PODailyOutput where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateReport", bln)
+        conn.Execute "delete from dbo.tblBA204_PODetailsReject where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateReport", bln)
+    End If
+
+    'posisi kolom header PO dicari dari judulnya
+    Dim cNo As Long, cQC As Long, cStart As Long, cEnd As Long, cSup As Long, cStat As Long, cDesc As Long
+    cNo = KolomHeader(ws, "No")
+    cQC = KolomHeader(ws, "QC Released")
+    cStart = KolomHeader(ws, "Start date")
+    cEnd = KolomHeader(ws, "End Date")
+    cSup = KolomHeader(ws, "Supplier")
+    If cSup = 0 Then cSup = KolomHeader(ws, "Machine")
+    cStat = KolomHeader(ws, "Production status")
+    cDesc = KolomHeader(ws, "Material Desc")
+    If cNo = 0 Then cNo = 20
+
+    Dim sudah As Object
+    Set sudah = CreateObject("Scripting.Dictionary")
+
     'Updating Table PO Daily Output
     B = 4
     tDateOpt = ws.Cells(B, 28).Value
@@ -216,13 +267,13 @@ Sub Post_PONOutput()
         tRem = ws.Cells(B, 37).Value
 
         'Header PO (baris pertama tiap PO: kolom No terisi)
-        If Not Kosong(ws.Cells(B, 20).Value) And tPON <> "" Then
+        If Not Kosong(ws.Cells(B, cNo).Value) And tPON <> "" Then
             conn.Execute "delete from dbo.tblBA204_POHeader where ProductType=" & SqlTeks(tProduct) & " and PON=" & SqlTeks(tPON)
             sql = "insert into dbo.tblBA204_POHeader (ProductType,PON,Batch,Material,MaterialDesc,Supplier,ProductionStatus,QCRelease,QCReleaseDate,StartDate,EndDate,InputBy,InputOn) values (" & _
                   SqlTeks(tProduct) & ", " & SqlTeks(tPON) & ", " & SqlTeks(tLot) & ", " & SqlTeks(tMat) & ", " & _
-                  SqlTeks(ws.Cells(B, 26).Value) & ", " & SqlTeks(ws.Cells(B, 24).Value) & ", " & SqlTeks(ws.Cells(B, 25).Value) & ", " & _
-                  SqlTeks(IIf(IsTanggal(ws.Cells(B, 21).Value), "Released", ws.Cells(B, 21).Value)) & ", " & SqlTgl(ws.Cells(B, 21).Value) & ", " & _
-                  SqlTgl(ws.Cells(B, 22).Value) & ", " & SqlTgl(ws.Cells(B, 23).Value) & ", " & SqlTeks(USR) & ", " & SqlWaktu(DT) & ")"
+                  SqlTeks(NilaiKolom(ws, B, cDesc)) & ", " & SqlTeks(NilaiKolom(ws, B, cSup)) & ", " & SqlTeks(NilaiKolom(ws, B, cStat)) & ", " & _
+                  SqlTeks(IIf(IsTanggal(NilaiKolom(ws, B, cQC)), "Released", NilaiKolom(ws, B, cQC))) & ", " & SqlTgl(NilaiKolom(ws, B, cQC)) & ", " & _
+                  SqlTgl(NilaiKolom(ws, B, cStart)) & ", " & SqlTgl(NilaiKolom(ws, B, cEnd)) & ", " & SqlTeks(USR) & ", " & SqlWaktu(DT) & ")"
             conn.Execute sql
             nHdr = nHdr + 1
         End If
@@ -236,8 +287,21 @@ Sub Post_PONOutput()
         If Not AngkaValid(tRty) Then alasan = alasan & "; Scrap 'Mismatch'"
 
         If alasan = "" Then
-            conn.Execute "delete from dbo.tblBA204_PODailyOutput where DateOperation=" & SqlTgl(tDateOpt) & " and ProductType=" & SqlTeks(tProduct) & " and Process=" & SqlTeks(tPro) & " and PON=" & SqlTeks(tPON)
-            conn.Execute "delete from dbo.tblBA204_PODetailsReject where DateOperation=" & SqlTgl(tDateOpt) & " and ProductType=" & SqlTeks(tProduct) & " and Process=" & SqlTeks(tPro) & " and PON=" & SqlTeks(tPON)
+            'Baris di bulan laporan sudah dibersihkan sekaligus di atas. Baris di luar bulan itu
+            'dibersihkan per kunci SEKALI saja per POST, supaya beberapa baris dengan PO, proses
+            'dan tanggal yang sama (beda shift / beda lot) tidak saling menimpa.
+            Dim diBulan As Boolean, kunci As String, wh As String
+            diBulan = False
+            If Not IsEmpty(bln) Then diBulan = (DateSerial(Year(CDate(tRep)), Month(CDate(tRep)), 1) = bln)
+            If Not diBulan Then
+                wh = " where DateOperation=" & SqlTgl(tDateOpt) & " and DateReport=" & SqlTgl(tRep) & " and ProductType=" & SqlTeks(tProduct) & " and Process=" & SqlTeks(tPro) & " and PON=" & SqlTeks(tPON) & " and ISNULL(Shift,N'')=" & SqlTeks(tShi)
+                kunci = wh
+                If Not sudah.Exists(kunci) Then
+                    sudah.Add kunci, True
+                    conn.Execute "delete from dbo.tblBA204_PODailyOutput" & wh
+                    conn.Execute "delete from dbo.tblBA204_PODetailsReject" & wh
+                End If
+            End If
 
             conn.Execute "insert into dbo.tblBA204_PODailyOutput (DateOperation,DateReport,Process,Shift,ProductType,PON,Batch,Material,Qty_Start,Qty_Output,Qty_Scrap,Remark,InputBy,InputOn) values (" & _
                 SqlTgl(tDateOpt) & ", " & SqlTgl(tRep) & ", " & SqlTeks(tPro) & ", " & SqlTeks(tShi) & ", " & SqlTeks(tProduct) & ", " & _
@@ -267,6 +331,11 @@ Sub Post_PONOutput()
         If B Mod 50 = 0 Then Application.StatusBar = "POST Data Process Prod... baris " & B
     Loop
 
+    'header PO yang sudah tidak punya data sama sekali ikut dihapus
+    conn.Execute "delete h from dbo.tblBA204_POHeader h where h.ProductType=" & SqlTeks(tProduct) & _
+                 " and not exists (select 1 from dbo.tblBA204_PODailyOutput o where o.PON = h.PON)" & _
+                 " and not exists (select 1 from dbo.tblBA204_PODetailsReject r where r.PON = h.PON)"
+
     conn.CommitTrans
     TutupKoneksi conn
     Application.StatusBar = False
@@ -293,6 +362,10 @@ Sub Post_DetailsReject2()
     conn.Execute "delete from dbo.tblBA204_DetailsReject2 where DateOperation < DATEADD(year,-2,CAST(GETDATE() AS date))" 'Retention 2 years + current
 
     tProduct = Trim$(CStr(ws.Range("D4").Value))
+    'Sinkron: hapus dulu data bulan laporan ini (kolom tanggal yang dikosongkan ikut hilang)
+    Dim blnS As Variant
+    blnS = BulanFile(ws)
+    If Not IsEmpty(blnS) Then conn.Execute "delete from dbo.tblBA204_DetailsReject2 where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateOperation", blnS)
     USR = Environ("Username")
     DT = Now
 
@@ -347,6 +420,10 @@ Sub Post_DailyOutput2()
     conn.Execute "delete from dbo.tblBA204_DailyOutput2 where DateOperation < DATEADD(year,-2,CAST(GETDATE() AS date))" 'Retention 2 years + current
 
     tProduct = Trim$(CStr(ws.Range("D4").Value))
+    'Sinkron: hapus dulu data bulan laporan ini (kolom tanggal yang dikosongkan ikut hilang)
+    Dim blnS As Variant
+    blnS = BulanFile(ws)
+    If Not IsEmpty(blnS) Then conn.Execute "delete from dbo.tblBA204_DailyOutput2 where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateOperation", blnS)
     USR = Environ("Username")
     DT = Now
 
@@ -407,6 +484,10 @@ Sub Post_Productivity2()
     conn.Execute "delete from dbo.tblBA204_Productivity2 where DateOperation < DATEADD(year,-2,CAST(GETDATE() AS date))" 'Retention 2 years + current
 
     tProduct = Trim$(CStr(ws.Range("D4").Value))
+    'Sinkron: hapus dulu data bulan laporan ini (kolom tanggal yang dikosongkan ikut hilang)
+    Dim blnS As Variant
+    blnS = BulanFile(ws)
+    If Not IsEmpty(blnS) Then conn.Execute "delete from dbo.tblBA204_Productivity2 where ProductType=" & SqlTeks(tProduct) & " and " & RentangBulan("DateOperation", blnS)
     USR = Environ("Username")
     DT = Now
 

@@ -9,19 +9,19 @@
 USE [PBL_MonitoringProduksi];
 GO
 IF COL_LENGTH('dbo.tblBA204_PODailyOutput', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_PODailyOutput ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_PODailyOutput ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Produk B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_PODetailsReject', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_PODetailsReject ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_PODetailsReject ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Produk B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_DailyOutput2', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_DailyOutput2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_DailyOutput2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Produk B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_Productivity2', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_Productivity2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_Productivity2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Produk B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_POHeader', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_POHeader ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_POHeader ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Produk B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_PODailyOutput', 'BulanReport') IS NULL
     ALTER TABLE dbo.tblBA204_PODailyOutput ADD BulanReport AS (DATEFROMPARTS(YEAR(DateReport), MONTH(DateReport), 1)) PERSISTED;
@@ -45,9 +45,17 @@ CREATE OR ALTER VIEW dbo.vw_D_POHeader AS
 SELECT t.* FROM dbo.tblBA204_POHeader t;
 GO
 CREATE OR ALTER VIEW dbo.vw_BulanLaporan AS
-SELECT DISTINCT Dept, Bulan = DATEFROMPARTS(YEAR(DateOperation), MONTH(DateOperation), 1)
+-- bulan laporan = bulan yang punya Daily Output Summary, ATAU bulan yang punya
+-- data Data Process Prod minimal 3 hari laporan (baris nyasar 1-2 hari, mis. 28 Feb, tetap disembunyikan)
+SELECT Dept, Bulan = DATEFROMPARTS(YEAR(DateOperation), MONTH(DateOperation), 1)
 FROM dbo.tblBA204_DailyOutput2
-WHERE DateOperation IS NOT NULL;
+WHERE DateOperation IS NOT NULL
+UNION
+SELECT Dept, BulanReport
+FROM dbo.tblBA204_PODailyOutput
+WHERE DateReport IS NOT NULL
+GROUP BY Dept, BulanReport
+HAVING COUNT(DISTINCT DateReport) >= 3;
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_PODailyOutput_DeptRep')
     CREATE INDEX IX_PODailyOutput_DeptRep ON dbo.tblBA204_PODailyOutput (Dept, DateReport) INCLUDE (Process, PON, Qty_Output, Qty_Start, BulanReport);

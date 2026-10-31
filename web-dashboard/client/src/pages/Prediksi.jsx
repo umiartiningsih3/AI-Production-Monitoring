@@ -64,7 +64,10 @@ function Isi({ d }) {
   }
   const w = peringatan(d, M);
   const hist = d.data.filter((r) => !r.forecast && isNum(r.aktual) && isNum(r.prediksi));
-  const mape = hist.length ? hist.reduce((a, r) => a + (isNum(r.ape) ? r.ape : 0), 0) / hist.filter((r) => isNum(r.ape)).length : null;
+  // akurasi = 1 - (total selisih / total aktual), dibatasi 0..100% supaya tidak pernah minus
+  const sumAkt = hist.reduce((a, r) => a + Math.abs(r.aktual), 0);
+  const sumErr = hist.reduce((a, r) => a + Math.abs(r.aktual - r.prediksi), 0);
+  const akurasi = sumAkt > 0 ? Math.min(1, Math.max(0, 1 - sumErr / sumAkt)) : null;
   const fitur = d.fitur.filter((x) => x.nilai > 0).map((x) => ({ ...x, nama: NAMA_FITUR[x.fitur] || x.fitur }));
   const fc = d.data.filter((r) => r.forecast);
 
@@ -77,13 +80,13 @@ function Isi({ d }) {
           <p>{w.teks}</p>
         </div>
         <div className="w-stats">
-          <div><small>Akurasi periode ini</small><b>{isNum(mape) ? fmtPct(1 - mape, 1) : '–'}</b></div>
+          <div><small>Akurasi periode ini</small><b>{isNum(akurasi) ? fmtPct(akurasi, 1) : '–'}</b></div>
           <div><small>MAPE uji model</small><b>{d.model ? fmtPct(d.model.MAPE, 2) : '–'}</b></div>
         </div>
       </div>
 
       <div className="grid-pred">
-        <ChartCard title={`${M.label}: Aktual vs Prediksi vs Target`} height={300}
+        <ChartCard title={`${M.label}: Aktual vs Prediksi vs Target`} points={rows.length} height={300}
                    subtitle={fc.length ? `Area abu-abu = prediksi ${fc.length} hari ke depan` : ''}
                    legend={[{ label: 'Aktual', color: C.blue }, { label: 'Prediksi', color: C.orange, dash: true },
                             { label: 'Target', color: C.target, dash: true }]}
@@ -92,14 +95,14 @@ function Isi({ d }) {
                                                      M.fmt(r.prediksi), M.fmt(r.target), isNum(r.ape) ? fmtPct(r.ape, 1) : '–']) }}>
           {rows.length === 0 ? <Empty /> : (
             <ResponsiveContainer>
-              <ComposedChart data={rows} margin={{ top: rows.length > 16 ? 44 : 22, right: 26, left: 0, bottom: 0 }}>
+              <ComposedChart data={rows} margin={{ top: 22, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke={C.grid} />
                 {firstFc >= 0 && (
                   <ReferenceArea x1={rows[Math.max(firstFc - 1, 0)].tanggal} x2={rows[rows.length - 1].tanggal}
                                  fill="#000" fillOpacity={0.05} stroke="none" ifOverflow="extendDomain" />
                 )}
                 <XAxis dataKey="tanggal" tickFormatter={fmtTglPendek} tick={AXIS} tickLine={false}
-                       axisLine={{ stroke: C.grid }} minTickGap={12} />
+                       axisLine={{ stroke: C.grid }} interval={0} />
                 <YAxis domain={d.metric === 'Output' ? [0, 'auto'] : ['auto', 'auto']} tickFormatter={M.axis}
                        tick={AXIS} tickLine={false} axisLine={false} width={52} />
                 <Tooltip content={<Tip labelFmt={(l, p) => fmtTgl(l) + (p.forecast ? ' · PREDIKSI' : '')} rows={(p) => [
@@ -116,7 +119,7 @@ function Isi({ d }) {
                       dot={{ r: 4, fill: C.orange, stroke: '#fff', strokeWidth: 2 }} isAnimationActive={false} />
                 <Line dataKey="aktual" stroke={C.blue} strokeWidth={2}
                       dot={{ r: 3, fill: C.blue, stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 5 }} isAnimationActive={false}>
-                  <LabelList dataKey="aktual" content={valueLabel(d.metric === 'Output' ? fmtLabel : (v) => fmtPct(v, 1), { count: rows.length, color: C.blue })} />
+                  <LabelList dataKey="aktual" content={valueLabel(d.metric === 'Output' ? fmtInt : (v) => fmtPct(v, 1), { count: rows.length, color: C.blue })} />
                 </Line>
               </ComposedChart>
             </ResponsiveContainer>

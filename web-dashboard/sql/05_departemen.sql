@@ -27,7 +27,7 @@ CREATE TABLE dbo.tblBA204_Departemen (
 GO
 MERGE dbo.tblBA204_Departemen AS t
 USING (VALUES
-    (N'SS',  N'Lini Produk B',            N'%LINI-B%', 1, N'PROSES_3', N'PROSES_1', N'PROSES_4', 0.975, 2),
+    (N'SS',  N'Lini Produk B',            N'%Produk B%', 1, N'PROSES_3', N'PROSES_1', N'PROSES_4', 0.975, 2),
     (N'HDC', N'Lini Produk A',            N'%',        9, N'PROSES_3', N'PROSES_1', N'PROSES_4', 0.975, 1)
 ) AS s (Dept, Nama, PolaProductType, Prioritas, ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir, TargetYieldDefault, Urut)
 ON t.Dept = s.Dept
@@ -291,6 +291,12 @@ GO
 /* Prediksi: model XGBoost saat ini dilatih dengan data HDC.
    Departemen lain baru diprediksi setelah punya model sendiri
    (baris di tblBA204_ModelInfo dengan Dept tersebut).           */
+-- fungsi model lini B (diisi ulang oleh train_to_sql.py ... SS); dibuat kosong dulu kalau belum ada
+IF OBJECT_ID(N'dbo.fn_Pred_Output_SS') IS NULL EXEC(N'CREATE FUNCTION dbo.fn_Pred_Output_SS (@plan_output float, @output_lag1 float, @output_ma3 float, @yield_lag1 float, @yield_ma7 float, @defect_lag1 float, @wip float, @progres_po float, @hari_ke float) RETURNS float AS BEGIN RETURN NULL; END');
+IF OBJECT_ID(N'dbo.fn_Pred_Yield_SS') IS NULL EXEC(N'CREATE FUNCTION dbo.fn_Pred_Yield_SS (@plan_output float, @output_lag1 float, @output_ma3 float, @yield_lag1 float, @yield_ma7 float, @defect_lag1 float, @wip float, @progres_po float, @hari_ke float) RETURNS float AS BEGIN RETURN NULL; END');
+IF OBJECT_ID(N'dbo.fn_Pred_Defect_SS') IS NULL EXEC(N'CREATE FUNCTION dbo.fn_Pred_Defect_SS (@plan_output float, @output_lag1 float, @output_ma3 float, @yield_lag1 float, @yield_ma7 float, @defect_lag1 float, @wip float, @progres_po float, @hari_ke float) RETURNS float AS BEGIN RETURN NULL; END');
+GO
+
 CREATE OR ALTER VIEW dbo.vw_PBI_Prediksi AS
 SELECT f.Dept, f.Tanggal, v.Metric,
        Aktual   = v.Aktual,
@@ -302,10 +308,16 @@ SELECT f.Dept, f.Tanggal, v.Metric,
 FROM dbo.vw_Fitur f
 CROSS APPLY (SELECT
     pOut = CASE WHEN f.Dept = N'HDC' THEN dbo.fn_Pred_Output(f.plan_output, f.output_lag1, f.output_ma3, f.yield_lag1, f.yield_ma7,
+                              f.defect_lag1, f.wip, f.progres_po, f.hari_ke)
+                WHEN f.Dept = N'SS'  THEN dbo.fn_Pred_Output_SS(f.plan_output, f.output_lag1, f.output_ma3, f.yield_lag1, f.yield_ma7,
                               f.defect_lag1, f.wip, f.progres_po, f.hari_ke) END,
     pYld = CASE WHEN f.Dept = N'HDC' THEN dbo.fn_Pred_Yield (f.plan_output, f.output_lag1, f.output_ma3, f.yield_lag1, f.yield_ma7,
+                              f.defect_lag1, f.wip, f.progres_po, f.hari_ke)
+                WHEN f.Dept = N'SS'  THEN dbo.fn_Pred_Yield_SS(f.plan_output, f.output_lag1, f.output_ma3, f.yield_lag1, f.yield_ma7,
                               f.defect_lag1, f.wip, f.progres_po, f.hari_ke) END,
     pDef = CASE WHEN f.Dept = N'HDC' THEN dbo.fn_Pred_Defect(f.plan_output, f.output_lag1, f.output_ma3, f.yield_lag1, f.yield_ma7,
+                              f.defect_lag1, f.wip, f.progres_po, f.hari_ke)
+                WHEN f.Dept = N'SS'  THEN dbo.fn_Pred_Defect_SS(f.plan_output, f.output_lag1, f.output_ma3, f.yield_lag1, f.yield_ma7,
                               f.defect_lag1, f.wip, f.progres_po, f.hari_ke) END) p
 CROSS APPLY (VALUES
     (N'Output', f.Output_,  CASE WHEN p.pOut < 0 THEN 0 ELSE p.pOut END,                       f.PlanOutput),

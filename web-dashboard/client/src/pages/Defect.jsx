@@ -100,15 +100,15 @@ function Isi({ d }) {
         </ChartCard>
       </div>
 
-      <ChartCard title="Tren Defect Harian: Aktual vs Prediksi"
+      <ChartCard title="Tren Defect Harian: Aktual vs Prediksi" points={tren.length}
                  legend={[{ label: 'Aktual', color: C.orange }, { label: 'Prediksi', color: C.purple, dash: true }]}
                  table={{ columns: ['Tanggal', 'Aktual', 'Prediksi'],
                           rows: d.tren.map((r) => [fmtTgl(r.tanggal) + (r.forecast ? ' (prediksi)' : ''), fmtPct(r.aktual, 2), fmtPct(r.prediksi, 2)]) }}>
         {tren.length === 0 ? <Empty /> : (
           <ResponsiveContainer>
-            <ComposedChart data={tren} margin={{ top: tren.length > 16 ? 44 : 22, right: 26, left: 0, bottom: 0 }}>
+            <ComposedChart data={tren} margin={{ top: 22, right: 26, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={C.grid} />
-              <XAxis dataKey="tanggal" tickFormatter={fmtTglPendek} tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} minTickGap={12} />
+              <XAxis dataKey="tanggal" tickFormatter={fmtTglPendek} tick={AXIS} tickLine={false} axisLine={{ stroke: C.grid }} interval={0} />
               <YAxis domain={[0, 'auto']} tickFormatter={(v) => fmtPct(v, 1)} tick={AXIS} tickLine={false} axisLine={false} width={52} />
               <Tooltip content={<Tip labelFmt={(l, p) => fmtTgl(l) + (p.forecast ? ' · PREDIKSI' : '')} rows={(p) => [
                 ...(p.forecast ? [] : [{ label: 'Aktual', value: fmtPct(p.aktual, 2), color: C.orange }]),

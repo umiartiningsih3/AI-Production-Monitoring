@@ -4,7 +4,7 @@ Fitur dihitung PERSIS seperti view dbo.vw_Fitur di SQL Server:
   plan_output, output_lag1, output_ma3, yield_lag1, yield_ma7,
   defect_lag1, wip, progres_po, hari_ke
 Pakai: python train_to_sql.py daily.csv out_dir [HDC|SS]
-Catatan: fungsi dbo.fn_Pred_* saat ini dipakai untuk departemen HDC.
+Fungsi: dbo.fn_Pred_* untuk HDC (lini A), dbo.fn_Pred_*_SS untuk SS (lini B).
 """
 import json, sys, datetime as dt
 import numpy as np, pandas as pd
@@ -20,6 +20,7 @@ FEATS = ['plan_output', 'output_lag1', 'output_ma3', 'yield_lag1', 'yield_ma7',
          'defect_lag1', 'wip', 'progres_po', 'hari_ke']
 VERSION = 'xgb-v1.0'
 DEPT = sys.argv[3] if len(sys.argv) > 3 else 'HDC'   # HDC = lini produk A, SS = lini produk B
+SUFFIX = '' if DEPT == 'HDC' else '_' + DEPT        # nama fungsi per departemen
 
 d = pd.read_csv(sys.argv[1], index_col=0, parse_dates=True)
 out_dir = sys.argv[2]
@@ -87,7 +88,7 @@ for name, col in targets.items():
     body = ' +\n        '.join(f"({node_sql(t, 2)})" for t in trees)
     params_sql = ', '.join(f'@{f} float' for f in FEATS)
     sql_funcs.append(
-        f"CREATE OR ALTER FUNCTION dbo.fn_Pred_{name} ({params_sql})\nRETURNS float\nAS\nBEGIN\n"
+        f"CREATE OR ALTER FUNCTION dbo.fn_Pred_{name}{SUFFIX} ({params_sql})\nRETURNS float\nAS\nBEGIN\n"
         f"    -- XGBoost {VERSION}: {len(trees)} pohon, max_depth {params['max_depth']}, "
         f"learning_rate {params['learning_rate']}, dilatih {len(train)} hari\n"
         f"    RETURN {base!r} +\n        {body};\nEND;\nGO\n")

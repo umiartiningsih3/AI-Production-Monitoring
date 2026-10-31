@@ -14,6 +14,8 @@ ws = wb['Data Process Prod ']
 rows = list(ws.iter_rows(min_row=3, values_only=True))
 hdr = [(' '.join(str(h).split()) if h else '') for h in rows[0]]
 ix = {h: i for i, h in enumerate(hdr) if h}
+ix.update({h.lstrip('*'): i for i, h in enumerate(hdr) if h and h.lstrip('*') not in ix})   # '*Date for Daily Report' = 'Date for Daily Report'
+ix.update({'*' + h: i for i, h in enumerate(hdr) if h and '*' + h not in ix})
 rj = [i for i, h in enumerate(hdr) if h.startswith('(') and h[1:5].isdigit()]
 po, rej = [], []
 for r in rows[1:]:

@@ -40,23 +40,23 @@ function Isi({ d }) {
         <KpiCard label="Productivity" value={fmtPct(k.productivity, 1)} accent={C.purple}
                  sub={isNum(k.actualMHP) ? `${k.actualMHP.toFixed(4).replace('.', ',')} jam-orang/pcs` : 'Belum ada data'}
                  status={isNum(k.productivity) ? (k.productivity >= 1 ? 'good' : 'warn') : ''} />
-        <KpiCard label="WIP (pcs)" value={fmtInt(k.wip)} accent={C.pink} sub="Sudah Forming, belum selesai Packaging" />
+        <KpiCard label="WIP (pcs)" value={fmtInt(k.wip)} accent={C.pink} sub="Sudah masuk proses awal, belum selesai proses akhir" />
         <KpiCard label="Progres PO" value={fmtPct(k.progresPO, 0)} accent={C.blue}
                  sub={`${fmtInt(k.poSelesai)} dari ${fmtInt(k.poTotal)} PO selesai`} />
       </div>
 
-      <div className="grid2">
-        <ChartCard title="Output vs Plan per Hari" subtitle={`${fmtTgl(d.periode.from)} – ${fmtTgl(d.periode.to)}`}
+      <div className="stack">
+        <ChartCard title="Output vs Plan per Hari" points={harian.length} subtitle={`${fmtTgl(d.periode.from)} – ${fmtTgl(d.periode.to)}`}
                    legend={[{ label: 'Output', color: C.blue, type: 'bar' }, { label: 'Plan', color: C.orange, dash: true }]}
                    table={{ columns: ['Tanggal', 'Output', 'Plan', 'Capaian'],
                             rows: harian.map((r) => [fmtTgl(r.tanggal), fmtInt(r.output), fmtInt(r.plan),
                                                      r.plan ? fmtPct(r.output / r.plan) : '–']) }}>
           {harian.length === 0 ? <Empty /> : (
             <ResponsiveContainer>
-              <ComposedChart data={harian} margin={{ top: harian.length > 16 ? 40 : 20, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%">
+              <ComposedChart data={harian} margin={{ top: 20, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%">
                 <CartesianGrid vertical={false} stroke={C.grid} />
                 <XAxis dataKey="tanggal" tickFormatter={fmtTglPendek} tick={AXIS} tickLine={false}
-                       axisLine={{ stroke: C.grid }} minTickGap={12} />
+                       axisLine={{ stroke: C.grid }} interval={0} />
                 <YAxis tickFormatter={fmtCompact} tick={AXIS} tickLine={false} axisLine={false} width={46} />
                 <Tooltip cursor={{ fill: 'rgba(17,141,255,0.08)' }}
                          content={<Tip labelFmt={fmtTgl} rows={(p) => [
@@ -65,7 +65,7 @@ function Isi({ d }) {
                            { label: 'Capaian', value: p.plan ? fmtPct(p.output / p.plan) : '–' },
                          ]} />} />
                 <Bar dataKey="output" fill={C.blue} radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false}>
-                  <LabelList dataKey="output" content={valueLabel(fmtLabel, { count: harian.length, min: 0 })} />
+                  <LabelList dataKey="output" content={valueLabel(fmtInt, { count: harian.length, min: 0 })} />
                 </Bar>
                 <Line dataKey="plan" stroke={C.orange} strokeWidth={2} strokeDasharray="5 4" type="stepAfter"
                       dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
@@ -74,16 +74,16 @@ function Isi({ d }) {
           )}
         </ChartCard>
 
-        <ChartCard title="Yield per Hari" subtitle="Good output ÷ (good + scrap)"
+        <ChartCard title="Yield per Hari" points={yieldRows.length} subtitle="Good output ÷ (good + scrap)"
                    legend={[{ label: 'Yield', color: C.navy }, { label: 'Target', color: C.target, dash: true }]}
                    table={{ columns: ['Tanggal', 'Yield', 'Target', 'Scrap'],
                             rows: yieldRows.map((r) => [fmtTgl(r.tanggal), fmtPct(r.yield, 2), fmtPct(r.target, 1), fmtInt(r.scrap)]) }}>
           {yieldRows.length === 0 ? <Empty /> : (
             <ResponsiveContainer>
-              <ComposedChart data={yieldRows} margin={{ top: yieldRows.length > 16 ? 44 : 22, right: 26, left: 0, bottom: 0 }}>
+              <ComposedChart data={yieldRows} margin={{ top: 22, right: 26, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke={C.grid} />
                 <XAxis dataKey="tanggal" tickFormatter={fmtTglPendek} tick={AXIS} tickLine={false}
-                       axisLine={{ stroke: C.grid }} minTickGap={12} />
+                       axisLine={{ stroke: C.grid }} interval={0} />
                 <YAxis domain={['auto', 1]} tickFormatter={(v) => fmtPct(v, 1)} tick={AXIS} tickLine={false}
                        axisLine={false} width={46} allowDataOverflow={false} />
                 <Tooltip content={<Tip labelFmt={fmtTgl} rows={(p) => [

@@ -35,7 +35,8 @@ export function KpiCard({ label, value, sub, status, accent = C.blue }) {
 }
 
 // Kartu grafik + tombol "Tabel" untuk melihat angka mentahnya
-export function ChartCard({ title, subtitle, legend, table, children, height = 260, className = '' }) {
+// points = jumlah titik/tanggal; kalau banyak, grafik bisa digeser ke samping supaya angka & tanggal tetap jelas
+export function ChartCard({ title, subtitle, legend, table, children, height = 260, className = '', points = 0 }) {
   const [showTable, setShowTable] = useState(false);
   return (
     <section className={`card ${className}`}>
@@ -63,7 +64,9 @@ export function ChartCard({ title, subtitle, legend, table, children, height = 2
           </table>
         </div>
       ) : (
-        <div style={{ height }}>{children}</div>
+        <div className="chart-scroll">
+          <div style={{ height, minWidth: points ? points * 62 + 60 : undefined }}>{children}</div>
+        </div>
       )}
     </section>
   );
@@ -112,12 +115,20 @@ export function Tip({ active, payload, label, labelFmt, rows }) {
 // Nama SKU asli tidak ditampilkan; hanya ukurannya (mis. "Produk 25G 8MM")
 export function labelProduk(sku, i) {
   const m = String(sku || '').match(/(\d+\s*G)\b.*?(\d+(?:[.,]\d+)?\s*MM)\b/i);
-  return m ? `Produk ${m[1].replace(/\s+/g, '').toUpperCase()} ${m[2].replace(/\s+/g, '').toUpperCase()}` : `Produk ${i + 1}`;
+  if (m) return `Produk ${m[1].replace(/\s+/g, '').toUpperCase()} ${m[2].replace(/\s+/g, '').toUpperCase()}`;
+  // Lini Produk B: tampilkan nama produk seperti di Excel (mis. "Produk 2.2MM TIPE-A SB ASSY")
+  const t = String(sku || '').trim().replace(/^PRODUK\b\s*/i, '');
+  return t ? `Produk ${t}` : `Produk ${i + 1}`;
 }
 
 export function Filters({ meta, f, setF, show = ['periode', 'produk', 'status'] }) {
   const maxD = meta?.maxDate;
-  const preset = (n) => maxD && setF({ ...f, from: addDays(maxD, -(n - 1)), to: maxD });
+  const preset = (n) => maxD && setF({ ...f, from: addDays(maxD, -(n - 1)), to: maxD, preset: n });
+  // tombol yang menyala mengikuti tombol yang terakhir diklik (bukan hanya rentang tanggalnya),
+  // supaya "Semua" dan "30 hr" tidak menyala bersamaan kalau datanya kebetulan 30 hari
+  const cocok = (n) => maxD && f.to === maxD && f.from === addDays(maxD, -(n - 1));
+  const aktif = f.preset ?? ([7, 14, 30].find(cocok)
+    ?? (meta && f.from === meta.minDate && f.to === meta.maxDate ? 'semua' : null));
   return (
     <div className="filters">
       {show.includes('periode') && (
@@ -125,19 +136,19 @@ export function Filters({ meta, f, setF, show = ['periode', 'produk', 'status'] 
           <label>Periode</label>
           <div className="periode">
             <input type="date" value={f.from || ''} max={f.to || undefined}
-                   onChange={(e) => setF({ ...f, from: e.target.value })} />
+                   onChange={(e) => setF({ ...f, from: e.target.value, preset: null })} />
             <span>s/d</span>
             <input type="date" value={f.to || ''} min={f.from || undefined}
-                   onChange={(e) => setF({ ...f, to: e.target.value })} />
+                   onChange={(e) => setF({ ...f, to: e.target.value, preset: null })} />
             <div className="seg">
               {[7, 14, 30].map((n) => (
                 <button key={n} onClick={() => preset(n)}
-                        className={maxD && f.to === maxD && f.from === addDays(maxD, -(n - 1)) ? 'on' : ''}>
+                        className={aktif === n ? 'on' : ''}>
                   {n} hr
                 </button>
               ))}
-              <button onClick={() => meta && setF({ ...f, from: meta.minDate, to: meta.maxDate })}
-                      className={meta && f.from === meta.minDate && f.to === meta.maxDate ? 'on' : ''}>Semua</button>
+              <button onClick={() => meta && setF({ ...f, from: meta.minDate, to: meta.maxDate, preset: 'semua' })}
+                      className={aktif === 'semua' ? 'on' : ''}>Semua</button>
             </div>
           </div>
         </div>
@@ -184,7 +195,7 @@ export function Empty({ children = 'Belum ada data untuk filter ini.' }) {
 // Label angka di atas tiap titik/batang grafik.
 // Kalau titiknya banyak (> 16), teks diputar tegak supaya tidak bertumpuk.
 export function valueLabel(fmt, { count = 0, color = '#333', min = null } = {}) {
-  const tegak = count > 16;
+  const tegak = false; // angka selalu mendatar
   return function Label(props) {
     const { x, y, width, value } = props;
     if (value === null || value === undefined || Number.isNaN(value)) return null;

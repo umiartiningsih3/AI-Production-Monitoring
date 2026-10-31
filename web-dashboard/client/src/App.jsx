@@ -65,6 +65,7 @@ export default function App() {
       if (!s.from && meta.maxDate) {
         const d = addDays(meta.maxDate, -29);
         n.from = meta.minDate && d < meta.minDate ? meta.minDate : d;
+        n.preset = 30;
       }
       if (!s.tahun && meta.tahun && meta.tahun.length) n.tahun = String(meta.tahun[0]);
       return n;

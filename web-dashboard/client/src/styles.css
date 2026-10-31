@@ -173,3 +173,11 @@ th { position: sticky; top: 0; background: #F9FAFB; font-weight: 600; color: var
 
 /* font Poppins juga untuk teks di dalam grafik */
 svg text { font-family: inherit; }
+
+.chart-scroll { overflow-x: auto; overflow-y: hidden; }
+.chart-scroll::-webkit-scrollbar { height: 8px; }
+.chart-scroll::-webkit-scrollbar-thumb { background: #c9d3e0; border-radius: 4px; }
+
+/* grafik ringkasan disusun atas-bawah */
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.stack .card { margin-bottom: 0; }

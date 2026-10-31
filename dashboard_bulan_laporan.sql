@@ -10,9 +10,17 @@ USE [PBL_MonitoringProduksi];
 GO
 
 CREATE OR ALTER VIEW dbo.vw_BulanLaporan AS
-SELECT DISTINCT Dept, Bulan = DATEFROMPARTS(YEAR(DateOperation), MONTH(DateOperation), 1)
-FROM dbo.vw_D_DailyOutput2
-WHERE DateOperation IS NOT NULL;
+-- bulan laporan = bulan yang punya Daily Output Summary, ATAU bulan yang punya
+-- data Data Process Prod minimal 3 hari laporan (baris nyasar 1-2 hari, mis. 28 Feb, tetap disembunyikan)
+SELECT Dept, Bulan = DATEFROMPARTS(YEAR(DateOperation), MONTH(DateOperation), 1)
+FROM dbo.tblBA204_DailyOutput2
+WHERE DateOperation IS NOT NULL
+UNION
+SELECT Dept, BulanReport
+FROM dbo.tblBA204_PODailyOutput
+WHERE DateReport IS NOT NULL
+GROUP BY Dept, BulanReport
+HAVING COUNT(DISTINCT DateReport) >= 3;
 GO
 
 CREATE OR ALTER VIEW dbo.vw_Harian AS
