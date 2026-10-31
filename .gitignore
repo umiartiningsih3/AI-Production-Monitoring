@@ -1,0 +1,27 @@
+# dependensi & hasil build (dibuat otomatis oleh START.bat)
+node_modules/
+web-dashboard/client/dist/
+web-dashboard/.node/
+web-dashboard/logs/
+*.log
+
+# file sementara Office / Windows
+~$*
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+
+# File Excel (data produksi) tidak di-upload
+*.xlsm
+*.xlsx
+~$*.xls*
+
+# Data perusahaan & file lama (tidak di-upload)
+data_master_lokal.sql
+*.pbix
+PowerBI_DAX.txt
+VBA (cadangan)/modDatabase.bas
+VBA (cadangan)/modPosting.bas

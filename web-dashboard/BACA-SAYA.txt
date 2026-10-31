@@ -1,0 +1,46 @@
+WEB DASHBOARD PRODUKSI HYDRODISSECTION CANNULA (PBLIF3-MD04)
+=============================================================
+
+Cara pakai
+1. Klik dua kali START.bat. Pertama kali butuh internet (sekitar 1-3 menit) untuk
+   menginstall React. Setelah itu bisa jalan tanpa internet.
+2. Browser terbuka otomatis di http://localhost:3000
+3. Isi data di Excel lalu klik tombol POST. Dalam sekitar 3 detik dashboard ikut berubah
+   (lampu "Live" di pojok kanan atas berkedip hijau).
+4. Jendela hitam START.bat jangan ditutup selama dashboard dipakai.
+
+Alur data
+  Excel (VBA, tombol POST) --ADO--> SQL Server (PBL_MonitoringProduksi)
+     --view & fungsi prediksi XGBoost--> server Node.js (server\index.js)
+     --REST API + Server-Sent Events--> React (client\src) di browser
+
+Struktur folder
+  config.json          koneksi SQL Server (Windows Authentication) dan port
+  server\index.js      API: /api/meta, /api/ringkasan, /api/tren, /api/prediksi, /api/defect
+                       real-time: /api/events (cek perubahan data tiap 3 detik)
+  server\queries.js    semua query SQL
+  server\db.js         koneksi ke SQL Server (lewat db-bridge.ps1, .NET SqlClient)
+  client\src\          kode React (App.jsx, pages\*.jsx, components\ui.jsx, styles.css)
+  logs\                catatan server dan build (untuk cek kalau ada error)
+
+Dua departemen
+  Tombol di header: "Hydrodissection Cannula" | "Safety Series". Semua halaman & filter
+  hanya menampilkan data departemen yang dipilih.
+  Departemen ditentukan dari kolom Product Type yang dikirim tombol POST:
+    Product Type mengandung kata "Safety"  -> Safety Series
+    selain itu                              -> Hydrodissection Cannula
+  Nama proses untuk output akhir dan WIP tiap departemen diatur di tabel
+  dbo.tblBA204_Departemen (ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir).
+  Untuk Safety Series nilainya masih sama dengan Hydrodissection (Sheating/Bending/Cartoning);
+  ubah sesuai proses Safety Series setelah Excel-nya dibuat.
+  Prediksi XGBoost baru tersedia untuk Hydrodissection. Safety Series perlu model sendiri
+  setelah datanya terkumpul (halaman prediksi menampilkan "model belum tersedia").
+
+Halaman
+  1. Ringkasan Produksi  - KPI output, yield, defect, productivity, WIP, progres PO
+  2. Pencapaian & Tren   - pencapaian bulanan dan YTD, tren output dan yield
+  3. Aktual vs Prediksi  - prediksi XGBoost (output/yield/defect), early warning, feature importance
+  4. Analisis Defect     - defect rate, prediksi H+1, top 5 defect, distribusi per proses
+
+Mode pengembangan (opsional): buka terminal di folder client, jalankan "npm run dev",
+lalu buka http://localhost:5173 (perubahan kode langsung terlihat). START.bat tetap harus jalan.
