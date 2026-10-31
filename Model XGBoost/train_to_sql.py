@@ -19,7 +19,7 @@ except ImportError:                            # cadangan: implementasi algoritm
 FEATS = ['plan_output', 'output_lag1', 'output_ma3', 'yield_lag1', 'yield_ma7',
          'defect_lag1', 'wip', 'progres_po', 'hari_ke']
 VERSION = 'xgb-v1.0'
-DEPT = sys.argv[3] if len(sys.argv) > 3 else 'HDC'   # HDC = Hydrodissection Cannula, SS = Safety Series
+DEPT = sys.argv[3] if len(sys.argv) > 3 else 'HDC'   # HDC = lini produk A, SS = lini produk B
 
 d = pd.read_csv(sys.argv[1], index_col=0, parse_dates=True)
 out_dir = sys.argv[2]

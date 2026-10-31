@@ -1,26 +1,27 @@
 /* =====================================================================
    PBL PBLIF3-MD04  -  Bagian 7: percepatan query departemen
    Kolom Dept dibuat sebagai computed column PERSISTED di setiap tabel
-   (ProductType mengandung "Safety" -> SS, selain itu -> HDC), jadi view
+   (ProductType mengandung kata kunci lini B -> SS, selain itu -> HDC;
+   kata kunci asli ada di data_master_lokal.sql), jadi view
    tidak perlu menghitung departemen baris per baris lagi.
    Aman dijalankan berulang.
    ===================================================================== */
 USE [PBL_MonitoringProduksi];
 GO
 IF COL_LENGTH('dbo.tblBA204_PODailyOutput', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_PODailyOutput ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Safety%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_PODailyOutput ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_PODetailsReject', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_PODetailsReject ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Safety%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_PODetailsReject ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_DailyOutput2', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_DailyOutput2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Safety%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_DailyOutput2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_Productivity2', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_Productivity2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Safety%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_Productivity2 ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_POHeader', 'Dept') IS NULL
-    ALTER TABLE dbo.tblBA204_POHeader ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%Safety%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
+    ALTER TABLE dbo.tblBA204_POHeader ADD Dept AS (CAST(CASE WHEN ProductType LIKE N'%LINI-B%' THEN N'SS' ELSE N'HDC' END AS nvarchar(10))) PERSISTED;
 GO
 IF COL_LENGTH('dbo.tblBA204_PODailyOutput', 'BulanReport') IS NULL
     ALTER TABLE dbo.tblBA204_PODailyOutput ADD BulanReport AS (DATEFROMPARTS(YEAR(DateReport), MONTH(DateReport), 1)) PERSISTED;

@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Dashboard Produksi Hydrodissection - JANGAN DITUTUP
+title Dashboard Produksi - JANGAN DITUTUP
 cd /d "%~dp0"
 rem PATH di laptop ini tidak memuat folder System32, jadi ditambahkan di sini
 set "PATH=%SystemRoot%\System32;%SystemRoot%;%SystemRoot%\System32\WindowsPowerShell\v1.0;%PATH%"
@@ -39,7 +39,7 @@ for /f "delims=" %%v in ('node -v') do set NODEV=%%v
 echo [%date% %time%] node %NODEV% >> logs\start.log
 echo.
 echo  ==============================================================
-echo    DASHBOARD PRODUKSI HYDRODISSECTION CANNULA  (PBLIF3-MD04)
+echo    DASHBOARD PRODUKSI  (PBLIF3-MD04)
 echo  ==============================================================
 echo    Node.js %NODEV%
 echo.

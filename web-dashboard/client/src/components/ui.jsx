@@ -109,6 +109,12 @@ export function Tip({ active, payload, label, labelFmt, rows }) {
   );
 }
 
+// Nama SKU asli tidak ditampilkan; hanya ukurannya (mis. "Produk 25G 8MM")
+export function labelProduk(sku, i) {
+  const m = String(sku || '').match(/(\d+\s*G)\b.*?(\d+(?:[.,]\d+)?\s*MM)\b/i);
+  return m ? `Produk ${m[1].replace(/\s+/g, '').toUpperCase()} ${m[2].replace(/\s+/g, '').toUpperCase()}` : `Produk ${i + 1}`;
+}
+
 export function Filters({ meta, f, setF, show = ['periode', 'produk', 'status'] }) {
   const maxD = meta?.maxDate;
   const preset = (n) => maxD && setF({ ...f, from: addDays(maxD, -(n - 1)), to: maxD });
@@ -149,7 +155,7 @@ export function Filters({ meta, f, setF, show = ['periode', 'produk', 'status'] 
           <label>Produk</label>
           <select value={f.produk || ''} onChange={(e) => setF({ ...f, produk: e.target.value })}>
             <option value="">Semua produk</option>
-            {(meta?.produk || []).map((p) => <option key={p} value={p}>{p}</option>)}
+            {(meta?.produk || []).map((p, i) => <option key={p} value={p}>{labelProduk(p, i)}</option>)}
           </select>
         </div>
       )}

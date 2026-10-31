@@ -1,4 +1,4 @@
-WEB DASHBOARD PRODUKSI HYDRODISSECTION CANNULA (PBLIF3-MD04)
+WEB DASHBOARD PRODUKSI (PBLIF3-MD04)
 =============================================================
 
 Cara pakai
@@ -23,17 +23,15 @@ Struktur folder
   client\src\          kode React (App.jsx, pages\*.jsx, components\ui.jsx, styles.css)
   logs\                catatan server dan build (untuk cek kalau ada error)
 
-Dua departemen
-  Tombol di header: "Hydrodissection Cannula" | "Safety Series". Semua halaman & filter
-  hanya menampilkan data departemen yang dipilih.
-  Departemen ditentukan dari kolom Product Type yang dikirim tombol POST:
-    Product Type mengandung kata "Safety"  -> Safety Series
-    selain itu                              -> Hydrodissection Cannula
-  Nama proses untuk output akhir dan WIP tiap departemen diatur di tabel
+Dua lini produk
+  Tombol di header memilih lini produk (kode HDC atau SS). Semua halaman & filter
+  hanya menampilkan data lini produk yang dipilih.
+  Lini produk ditentukan dari kolom Product Type yang dikirim tombol POST
+  (aturan dan nama lengkapnya ada di tabel dbo.tblBA204_Departemen dan file lokal
+  data_master_lokal.sql).
+  Nama proses untuk output akhir dan WIP tiap lini diatur di tabel
   dbo.tblBA204_Departemen (ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir).
-  Untuk Safety Series nilainya masih sama dengan Hydrodissection (Sheating/Bending/Cartoning);
-  ubah sesuai proses Safety Series setelah Excel-nya dibuat.
-  Prediksi XGBoost baru tersedia untuk Hydrodissection. Safety Series perlu model sendiri
+  Prediksi XGBoost baru tersedia untuk lini HDC. Lini SS perlu model sendiri
   setelah datanya terkumpul (halaman prediksi menampilkan "model belum tersedia").
 
 Halaman

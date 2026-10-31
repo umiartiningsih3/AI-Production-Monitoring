@@ -1,6 +1,6 @@
 Attribute VB_Name = "YieldOutput"
 '=====================================================================
-'  PBL PBLIF3-MD04 - Monitoring & Prediksi Produksi Hydrodissection
+'  PBL PBLIF3-MD04 - Monitoring & Prediksi Produksi
 '  Modul YieldOutput : POST data Excel ke SQL Server LOKAL.
 '
 '  Alur sama dengan macro produksi (Post_PONOutput, Post_DetailsReject2,

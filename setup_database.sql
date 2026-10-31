@@ -1,7 +1,7 @@
 /* =====================================================================
    PBL PBLIF3-MD04
-   Pengembangan Sistem Monitoring dan Prediksi Produksi pada Area
-   Hydrodissection Cannula & Safety Series menggunakan Machine Learning
+   Pengembangan Sistem Monitoring dan Prediksi Produksi
+   menggunakan Machine Learning
 
    Skrip database untuk SQL Server 2022.
    Isi : database, 5 tabel posting Excel, tabel master SKU, tabel hasil

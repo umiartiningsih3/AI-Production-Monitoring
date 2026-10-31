@@ -41,7 +41,7 @@ function addDays(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 
-// departemen: HDC = Hydrodissection Cannula, SS = Safety Series (lihat tblBA204_Departemen)
+// departemen: kode HDC / SS, nama lengkapnya ada di tabel tblBA204_Departemen
 const deptOf = (q) => (q && /^[A-Za-z]{1,10}$/.test(q.dept || '') ? q.dept.toUpperCase() : 'HDC');
 
 let metaCache = {};

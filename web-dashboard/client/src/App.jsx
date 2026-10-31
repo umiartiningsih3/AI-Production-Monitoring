@@ -14,8 +14,8 @@ const PAGES = [
 ];
 
 const DEPT_DEFAULT = [
-  { kode: 'HDC', nama: 'Hydrodissection Cannula' },
-  { kode: 'SS', nama: 'Safety Series' },
+  { kode: 'HDC', nama: 'Lini Produk A' },
+  { kode: 'SS', nama: 'Lini Produk B' },
 ];
 const KOSONG = { from: '', to: '', produk: '', status: '', tahun: '' };
 
@@ -37,7 +37,8 @@ export default function App() {
   const meta = metaRaw && metaRaw.dept === dept ? metaRaw : null;   // abaikan meta departemen sebelumnya
   const [page, setPage] = useState(readHash);
   const [f, setF] = useState({ ...KOSONG, dept });
-  const departemen = (metaRaw && metaRaw.departemen && metaRaw.departemen.length) ? metaRaw.departemen : DEPT_DEFAULT;
+  // nama lini produk sengaja ditulis umum (tidak memakai nama dari database)
+  const departemen = DEPT_DEFAULT;
   const namaDept = (departemen.find((d) => d.kode === dept) || {}).nama || dept;
 
   const setDept = (d) => {

@@ -1,9 +1,9 @@
 /* =====================================================================
    PBL PBLIF3-MD04  -  Bagian 5: dukungan 2 departemen
-     HDC = Hydrodissection Cannula
-     SS  = Safety Series
+     HDC = Lini Produk A
+     SS  = Lini Produk B
    Departemen ditentukan dari kolom ProductType yang dikirim VBA:
-   ProductType yang mengandung "Safety" -> SS, selain itu -> HDC.
+   ProductType yang mengandung kata kunci lini B -> SS, selain itu -> HDC.
    Aturan proses (output akhir & WIP) per departemen ada di tabel
    dbo.tblBA204_Departemen, jadi bisa diubah tanpa mengubah kode.
    Aman dijalankan berulang.
@@ -27,8 +27,8 @@ CREATE TABLE dbo.tblBA204_Departemen (
 GO
 MERGE dbo.tblBA204_Departemen AS t
 USING (VALUES
-    (N'SS',  N'Safety Series',           N'%Safety%', 1, N'Sheating', N'Bending', N'Cartoning', 0.975, 2),
-    (N'HDC', N'Hydrodissection Cannula', N'%',        9, N'Sheating', N'Bending', N'Cartoning', 0.975, 1)
+    (N'SS',  N'Lini Produk B',            N'%LINI-B%', 1, N'Sheating', N'Bending', N'Cartoning', 0.975, 2),
+    (N'HDC', N'Lini Produk A',            N'%',        9, N'Sheating', N'Bending', N'Cartoning', 0.975, 1)
 ) AS s (Dept, Nama, PolaProductType, Prioritas, ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir, TargetYieldDefault, Urut)
 ON t.Dept = s.Dept
 WHEN NOT MATCHED THEN INSERT (Dept, Nama, PolaProductType, Prioritas, ProsesOutput, ProsesWIPAwal, ProsesWIPAkhir, TargetYieldDefault, Urut)
