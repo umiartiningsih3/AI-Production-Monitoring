@@ -15,7 +15,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink);
-  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif; font-size: 14px; }
+  font-family: 'Poppins', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif; font-size: 14px; }
 button, input, select { font: inherit; color: inherit; }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
@@ -170,3 +170,6 @@ th { position: sticky; top: 0; background: #F9FAFB; font-weight: 600; color: var
 .dept button:hover { opacity: 1; background: rgba(255,255,255,.1); }
 .dept button.on { background: #fff; color: var(--navy); opacity: 1; }
 @media (max-width: 900px) { .dept { order: 3; width: 100%; } .dept button { flex: 1; } }
+
+/* font Poppins juga untuk teks di dalam grafik */
+svg text { font-family: inherit; }
